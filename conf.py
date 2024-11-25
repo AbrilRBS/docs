@@ -38,7 +38,8 @@ extensions = [
     'sphinx_sitemap',
     'notfound.extension',
     'sphinx.ext.todo',
-    'sphinxcontrib.jquery'
+    'sphinxcontrib.jquery',
+    'sphinx_rtd_dark_mode',
 ]
 
 # The short X.Y version.
@@ -151,6 +152,8 @@ html_baseurl = "https://docs.conan.io/"
 # further. For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {}
+
+default_dark_mode = True
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []

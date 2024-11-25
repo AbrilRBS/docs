@@ -5,8 +5,8 @@
 
 .. _tools:
 
-Tools
-=====
+Tools!
+======
 
 .. caution::
 

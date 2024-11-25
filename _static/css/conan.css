@@ -26,3 +26,29 @@ h1, h2, .rst-content .toctree-wrapper p.caption, h3, h4, h5, h6, legend {
     box-shadow: none;
     font-weight: normal;
 }
+
+.old-conan-1x-warning {
+    border: 2px solid #eb8484;
+    background-color: #ffcaca;
+    padding: 3px;
+    margin-bottom: 5px
+}
+
+html[data-theme="dark"] .old-conan-1x-warning {
+    border: 2px solid #eb8484;
+    background-color: black;
+    padding: 3px;
+    margin-bottom: 5px
+}
+
+.conancenter-1-freeze-warning {
+    border: 2px solid #c6ac58;
+    background-color: #f7ecc6;
+    padding: 3px;
+}
+
+html[data-theme="dark"] .conancenter-1-freeze-warning {
+    border: 2px solid #c6ac58;
+    background-color: black;
+    padding: 3px;
+}
