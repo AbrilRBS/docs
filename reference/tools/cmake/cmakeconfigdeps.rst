@@ -355,6 +355,102 @@ Example:
         self.cpp_info.builddirs.append(os.path.join("lib", "cmake", "foo"))
 
 
+Reading upstream CPS files with ``conan.cps``
+---------------------------------------------
+
+Some build systems can produce a `CPS (Common Package Specification) <https://cps-org.github.io/cps/>`_
+file describing an installed package, for example CMake's ``export(PACKAGE_INFO)`` and
+``install(PACKAGE_INFO)``. The ``conan.cps.CPS`` helper can load one of these ``.cps`` files
+and translate it into a regular ``cpp_info`` object, as an alternative to filling
+``includedirs``, ``libs``, ``defines``, etc. by hand in ``package_info()``. The resulting
+``cpp_info`` is generator-agnostic, so it can be consumed by ``CMakeConfigDeps``,
+``CMakeDeps``, or any other generator, like any other recipe ``cpp_info``:
+
+.. code-block:: python
+
+    import glob
+    from conan import ConanFile
+    from conan.cps import CPS
+
+    class Pkg(ConanFile):
+        settings = "os", "arch", "compiler", "build_type"
+
+        def package_info(self):
+            cps_file = glob.glob("**/*.cps", recursive=True)[0]
+            self.cpp_info = CPS.load(cps_file, self).to_conan()
+
+Passing the ``conanfile`` (``self``) to ``CPS.load(file, conanfile, configuration=None)`` is
+strongly recommended, and required for CPS files that declare per-component
+``configurations``. It is used to:
+
+- Pick the ``configurations`` override that matches the current ``settings.build_type``.
+- Filter the ``c``/``cpp`` entries of ``definitions`` down to the languages declared in
+  the recipe's ``languages`` attribute.
+
+.. note::
+
+    Calling ``CPS.load()`` (or constructing ``CPS()``) without a ``conanfile`` logs a
+    deprecation warning: this mode cannot resolve ``configurations`` overrides or filter
+    ``definitions`` by language, and is expected to be removed in a future Conan version.
+    Available since Conan 2.33.
+
+Selecting a configuration
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A CPS component can define its base values plus a ``configurations`` map of overrides, e.g.
+what CMake's multi-config generators (like Ninja Multi-Config or Visual Studio) emit through
+``export(PACKAGE_INFO)``:
+
+.. code-block:: json
+
+    {
+        "components": {
+            "mypkg": {
+                "location": "@prefix@/lib/mypkg.a",
+                "definitions": {"cpp": {"FOO": "1"}},
+                "configurations": {
+                    "Release": {
+                        "link_location": "@prefix@/lib/Release/mypkg.lib",
+                        "definitions": {"cpp": {"FOO": "2"}}
+                    },
+                    "Debug": {
+                        "link_location": "@prefix@/lib/Debug/mypkgd.lib",
+                        "definitions": {"cpp": {"FOO": "0", "DEBUG": "1"}}
+                    }
+                }
+            }
+        }
+    }
+
+When deserializing a component like this one, one ``configurations`` entry is selected as
+follows:
+
+- If ``configuration`` is passed explicitly to ``CPS.load()``, that named entry is used
+  regardless of ``settings``. A ``ConanException`` is raised if it doesn't exist.
+- Otherwise, if ``conanfile`` is passed and its ``settings.build_type`` is defined, the
+  entry matching ``str(settings.build_type)`` is used, falling back to its lowercase form
+  (e.g. ``Release`` then ``release``). A ``ConanException`` is raised if neither matches.
+- Otherwise, if ``conanfile`` is passed but has no ``build_type`` setting, no
+  ``configurations`` entry is selected, and the component's base values are used as-is.
+- Otherwise, a ``ConanException`` is raised: the CPS file has ``configurations`` but no
+  ``conanfile`` or explicit ``configuration`` was given to select one.
+
+Once selected, each field (``type``, ``requires``, ``link_requires``, ``includes``,
+``location``, ``link_location``, ``link_libraries``, ``link_languages``, ``definitions``)
+is read from that ``configurations`` entry when present there, otherwise falling back to
+the component's base value. This replacement happens per field, not as a deep merge: a
+``definitions`` entry in the selected configuration is used in full, instead of being
+combined key by key with the base ``definitions``.
+
+The explicit ``configuration`` argument is useful to read a specific configuration
+regardless of the consuming recipe settings, e.g. when inspecting a dependency file outside
+of a normal ``package_info()`` flow:
+
+.. code-block:: python
+
+    self.cpp_info = CPS.load(cps_file, self, configuration="RelWithDebInfo").to_conan()
+
+
 Reference
 ---------
 
